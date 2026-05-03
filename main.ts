@@ -4,6 +4,7 @@ namespace SpriteKind {
     export const delayer = SpriteKind.create()
 }
 function menu () {
+    isPlaying = false
     info.setScore(0)
     if (myMenu) {
         myMenu.close()
@@ -44,10 +45,6 @@ titleScreen.fillRect(52, 12, 16, 22, 8)
     title.setPosition(80, 30)
     screenSpeed = 10
     scroller.scrollBackgroundWithSpeed(0, screenSpeed)
-    pink = "100$"
-    America = "1,000$"
-    golfCart = "10,000$"
-    isPlaying = false
     myMenu2 = miniMenu.createMenu(
     miniMenu.createMenuItem("play/shop", assets.image`play`),
     miniMenu.createMenuItem("how to play", assets.image`questionMark`)
@@ -253,18 +250,20 @@ let total = 0
 let listOfCars: miniMenu.MenuItem[] = []
 let myMenu3: miniMenu.MenuSprite = null
 let myMenu2: miniMenu.MenuSprite = null
-let isPlaying = false
-let golfCart = ""
-let America = ""
-let pink = ""
 let title: fancyText.TextSprite = null
 let coin: Sprite = null
 let mySprite: Sprite = null
 let myMenu: miniMenu.MenuSprite = null
+let isPlaying = false
 let maxCars = 0
 let screenSpeed = 0
+let golfCart = ""
+let America = ""
+let pink = ""
 let titleScreen: Image = null
-// 1. Initial State Variables
+pink = "100$"
+America = "1,000$"
+golfCart = "10,000$"
 screenSpeed = 10
 maxCars = 1
 let carHeight = 15
@@ -299,7 +298,6 @@ game.onUpdateInterval(randint(5000, 10000), function () {
         coin.setFlag(SpriteFlag.AutoDestroy, true)
     }
 })
-// 2. Continuous Spawning Algorithm (Uses Pause)
 forever(function () {
     if (isPlaying) {
         p = sprites.create(assets.image`enemyCar`, SpriteKind.Projectile)
