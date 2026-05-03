@@ -260,6 +260,8 @@ let screenSpeed = 0
 let golfCart = ""
 let America = ""
 let pink = ""
+music.setVolume(127.5)
+music.play(music.createSong(assets.song`music`), music.PlaybackMode.LoopingInBackground)
 let titleScreen: Image = null
 pink = "100$"
 America = "1,000$"
