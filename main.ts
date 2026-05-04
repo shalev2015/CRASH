@@ -3,19 +3,53 @@ namespace SpriteKind {
     export const extra = SpriteKind.create()
     export const delayer = SpriteKind.create()
 }
+sprites.onOverlap(SpriteKind.Player, SpriteKind.extra, function (s, o) {
+    o.destroy()
+    info.setScore(info.score() * 2)
+})
+function setVolume () {
+    music.stopAllSounds()
+    music.setVolume(volume)
+    music.play(music.tonePlayable(262, 500), music.PlaybackMode.UntilDone)
+    volumeDiagram = fancyText.create(convertToText(volume), 0, 8, fancyText.rounded_large)
+    volumeDiagram.setPosition(80, 60)
+    pauseUntil(() => controller.B.isPressed() || controller.left.isPressed() || controller.right.isPressed())
+    sprites.destroy(volumeDiagram)
+    if (controller.right.isPressed() && volume < 245) {
+        volume += 10
+    }
+    if (controller.left.isPressed() && volume > 8) {
+        volume += 0 - 10
+    }
+    if (controller.B.isPressed()) {
+        music.play(music.createSong(assets.song`music`), music.PlaybackMode.LoopingInBackground)
+    } else {
+        setVolume()
+    }
+}
 function menu () {
-    isPlaying = false
-    info.setScore(0)
+    color.startFadeFromCurrent(color.Black)
+    color.pauseUntilFadeDone()
+    isMenu = 0
+    if (playerSprite) {
+        sprites.destroy(playerSprite)
+    }
+    if (shopTitle) {
+        sprites.destroy(shopTitle)
+    }
     if (myMenu) {
         myMenu.close()
-        sprites.destroy(myMenu)
     }
-    if (mySprite) {
-        sprites.destroy(mySprite)
+    if (myMenu3) {
+        myMenu3.close()
     }
-    if (coin) {
-        sprites.destroy(coin)
-    }
+    isPlaying = false
+    info.setScore(0)
+    sprites.destroyAllSpritesOfKind(SpriteKind.Player)
+    sprites.destroyAllSpritesOfKind(SpriteKind.extra)
+    myTextSprite = fancyText.create("Crash!", 0, 13, fancyText.gothic_large)
+    myTextSprite.z = 100
+    myTextSprite.y = 30
     titleScreen = image.create(160, 120)
     titleScreen.fill(7)
     titleScreen.fillRect(35, 0, 90, 120, 12)
@@ -41,290 +75,214 @@ titleScreen.fillRect(52, 12, 16, 22, 8)
     titleScreen.fillRect(68, 97, 2, 6, 15)
     titleScreen.fillRect(54, 85, 12, 5, 1)
     scene.setBackgroundImage(titleScreen)
-    title = fancyText.create("Crash!", 0, 13, fancyText.gothic_large)
-    title.setPosition(80, 30)
-    screenSpeed = 10
-    scroller.scrollBackgroundWithSpeed(0, screenSpeed)
+    scroller.scrollBackgroundWithSpeed(0, 50)
     myMenu2 = miniMenu.createMenu(
     miniMenu.createMenuItem("play/shop", assets.image`play`),
-    miniMenu.createMenuItem("how to play", assets.image`questionMark`)
+    miniMenu.createMenuItem("how to play", assets.image`questionMark`),
+    miniMenu.createMenuItem("volume", assets.image`volume`)
     )
-    myMenu2.onSelectionChanged(function (selection, selectedIndex) {
-        music.play(music.melodyPlayable(music.thump), music.PlaybackMode.UntilDone)
-    })
-    myMenu2.onButtonPressed(controller.A, function (selection, selectedIndex) {
-        if (selectedIndex == 0) {
-            sprites.destroy(title)
+    color.startFadeFromCurrent(color.originalPalette)
+    myMenu2.onButtonPressed(controller.A, function (selection, index) {
+        if (index == 0) {
             level()
-        } else if (selectedIndex == 1) {
-            game.showLongText("Hello there. Welcome to CRASH!, the game for showing off your driving skills. To play the game, you must dodge the blue cars. If you CRASH! into a coin, you will get a money boost. If you CRASH! into a clock, you will slow  down. Good luck!", DialogLayout.Center)
+        } else if (index == 1) {
+            game.showLongText("Dodge blue cars, collect coins and clocks!", DialogLayout.Center)
+        } else if (index == 2) {
+            setVolume()
         }
     })
 }
-controller.anyButton.onEvent(ControllerButtonEvent.Pressed, function () {
-    Notification.cancelNotification()
-})
 function level () {
-    color.startFade(color.originalPalette, color.Black, 1000)
-    pause(1000)
+    color.startFadeFromCurrent(color.Black)
+    color.pauseUntilFadeDone()
     myMenu2.close()
+    sprites.destroy(myTextSprite)
+    isMenu = 1
     myMenu3 = miniMenu.createMenu(
-    miniMenu.createMenuItem("level 1 (regular)"),
-    miniMenu.createMenuItem("level 2 (hard)"),
-    miniMenu.createMenuItem("level 3 (impossible)"),
-    miniMenu.createMenuItem("level 4 (ludicrous)")
+    miniMenu.createMenuItem("Level 1"),
+    miniMenu.createMenuItem("Level 2"),
+    miniMenu.createMenuItem("Level 3"),
+    miniMenu.createMenuItem("Level 4")
     )
-    myMenu3.setTitle("Select Level (1-4)")
-    color.startFade(color.Black, color.originalPalette, 1000)
-    myMenu3.onButtonPressed(controller.A, function (selection, selectedIndex) {
-        if (selectedIndex == 0) {
-            maxCars = 3
-        } else if (selectedIndex == 1) {
-            maxCars = 4
-        } else if (selectedIndex == 2) {
-            maxCars = 5
-        } else if (selectedIndex == 3) {
-            maxCars = 6
-        }
+    color.startFadeFromCurrent(color.originalPalette)
+    myMenu3.onButtonPressed(controller.A, function (selection, index) {
+        maxCars = index + 3
         shop()
     })
 }
 function list () {
+    let menuItems: miniMenu.MenuItem[] = []
     if (myMenu) {
         sprites.destroy(myMenu)
     }
-    listOfCars = [
-    miniMenu.createMenuItem("owned", assets.image`redCar`),
-    miniMenu.createMenuItem(pink, assets.image`pinkCar`),
-    miniMenu.createMenuItem(America, assets.image`americaCar`),
-    miniMenu.createMenuItem(golfCart, assets.image`golfCart`)
-    ]
-    myMenu = miniMenu.createMenuFromArray(listOfCars)
-    total = total + info.score()
-    myMenu.setTitle("" + total + "$")
-    myMenu.setStyleProperty(miniMenu.StyleKind.Title, miniMenu.StyleProperty.Alignment, 1)
+    for (let j = 0; j <= status.length - 1; j++) {
+        menuItems.push(miniMenu.createMenuItem(status[j], carImgs[j]))
+    }
+    myMenu = miniMenu.createMenuFromArray(menuItems)
+    total += info.score()
     info.setScore(0)
+    myMenu.setTitle("" + total + "$")
     myMenu.setFrame(assets.image`city`)
-    myMenu.setStyleProperty(miniMenu.StyleKind.Selected, miniMenu.StyleProperty.Background, 9)
     myMenu.z = 1
     myMenu.x = 80
-    myMenu.onSelectionChanged(function (selection, selectedIndex) {
-        music.play(music.melodyPlayable(music.thump), music.PlaybackMode.UntilDone)
-    })
-    myMenu.onButtonPressed(controller.A, function (selection, selectedIndex) {
+    if (playerSprite) {
+        playerSprite.x = 80
+    }
+    myMenu.onButtonPressed(controller.A, function (selection, index) {
         music.play(music.melodyPlayable(music.knock), music.PlaybackMode.UntilDone)
-        if (selectedIndex == 0) {
-            car = assets.image`redCar`
-            carType = 1
+        if (status[index] != "owned") {
+            if (total >= prices[index]) {
+                total += 0 - prices[index]
+                status[index] = "owned"
+                list()
+            }
+        } else {
+            car = carImgs[index]
+            carType = index + 1
             play()
-        } else if (selectedIndex == 1) {
-            if (pink == "100$") {
-                if (total >= 100) {
-                    pink = "owned"
-                    total = total - 100
-                    myMenu.close()
-                    list()
-                }
-            } else {
-                car = assets.image`pinkCar`
-                carType = 2
-                play()
-            }
-        } else if (selectedIndex == 2) {
-            if (America == "1,000$") {
-                if (total >= 1000) {
-                    America = "owned"
-                    total = total - 1000
-                    myMenu.close()
-                    list()
-                }
-            } else {
-                car = assets.image`americaCar`
-                carType = 3
-                play()
-            }
-        } else if (selectedIndex == 3) {
-            if (golfCart == "10,000$") {
-                if (total >= 10000) {
-                    golfCart = "owned"
-                    total = total - 10000
-                    myMenu.close()
-                    list()
-                }
-            } else {
-                car = assets.image`golfCart`
-                carType = 4
-                play()
-            }
         }
     })
 }
-sprites.onOverlap(SpriteKind.Player, SpriteKind.delayer, function (sprite, otherSprite) {
-    sprites.destroy(otherSprite)
+sprites.onOverlap(SpriteKind.Player, SpriteKind.delayer, function (s, o) {
+    o.destroy()
     screenSpeed = Math.max(10, screenSpeed - 20)
 })
 function play () {
-    color.startFadeFromCurrent(color.Black, 1000)
-    pause(1000)
+    color.startFadeFromCurrent(color.Black)
+    color.pauseUntilFadeDone()
     myMenu.close()
-    everyHowMuch = 500
     sprites.destroy(shopTitle)
     screenSpeed = 10
-    pause(1000)
-    mySprite = sprites.create(car, SpriteKind.Player)
-    controller.moveSprite(mySprite, 100, 0)
-    mySprite.setStayInScreen(true)
-    mySprite.setPosition(80, 110)
-    color.startFadeFromCurrent(color.originalPalette, 1000)
+    playerSprite = sprites.create(car, SpriteKind.Player)
+    playerSprite.setStayInScreen(true)
+    playerSprite.setPosition(80, 110)
+    controller.moveSprite(playerSprite, 100, 0)
     isPlaying = true
+    color.startFadeFromCurrent(color.originalPalette)
 }
-sprites.onOverlap(SpriteKind.Player, SpriteKind.Projectile, function (sprite, otherSprite) {
+function shop () {
+    color.startFadeFromCurrent(color.Black)
+    color.pauseUntilFadeDone()
+    if (explosion) {
+        sprites.destroy(explosion)
+        sprites.destroy(ambulance)
+    }
+    if (myMenu3) {
+        myMenu3.close()
+    }
+    scene.setBackgroundImage(assets.image`road`)
+    sprites.destroyAllSpritesOfKind(SpriteKind.Projectile)
+    shopTitle = sprites.create(assets.image`shop`, SpriteKind.prompt)
+    shopTitle.y = 10
+    list()
+    color.startFadeFromCurrent(color.originalPalette)
+}
+controller.menu.onEvent(ControllerButtonEvent.Pressed, function () {
+    if (isMenu != 0) {
+        menu()
+    }
+})
+sprites.onOverlap(SpriteKind.Player, SpriteKind.Enemy, function (sprite, other) {
     isPlaying = false
+    screenSpeed = 0
+    scroller.scrollBackgroundWithSpeed(0, screenSpeed)
     explosion = sprites.create(assets.image`explosion`, SpriteKind.prompt)
-    explosion.setPosition(mySprite.x, mySprite.y)
-    sprites.destroy(otherSprite)
-    sprites.destroy(sprite)
+    explosion.setPosition(sprite.x, sprite.y)
+    sprite.destroy(effects.fire, 500)
+    ambulance = sprites.create(assets.image`ambulance`, SpriteKind.prompt)
+    ambulance.follow(explosion)
     animation.runImageAnimation(
     explosion,
     assets.animation`explosionAnim`,
     500,
     false
     )
-    explosion.setVelocity(0, screenSpeed)
-    whereItMoves = sprites.create(assets.image`whereItMoves`, SpriteKind.prompt)
-    whereItMoves.setVelocity(0, screenSpeed)
-    ambulance = sprites.createProjectileFromSide(assets.image`ambulance`, 0, 0)
-    ambulance.setPosition(80, -7)
-    whereItMoves.setPosition(explosion.x, explosion.y - 16)
-    ambulance.follow(whereItMoves, screenSpeed + 10)
-    music.play(music.melodyPlayable(music.bigCrash), music.PlaybackMode.UntilDone)
-    music.play(music.melodyPlayable(music.siren), music.PlaybackMode.InBackground)
+    music.play(music.melodyPlayable(music.bigCrash), music.PlaybackMode.InBackground)
     pause(2000)
     shop()
 })
-sprites.onOverlap(SpriteKind.Player, SpriteKind.extra, function (sprite, otherSprite) {
-    sprites.destroy(otherSprite)
-    info.setScore(info.score() * 1.5)
-})
-function shop () {
-    color.startFade(color.originalPalette, color.Black, 1000)
-    pause(1000)
-    myMenu3.close()
-    scene.setBackgroundImage(assets.image`road`)
-    music.stopAllSounds()
-    pause(1000)
-    sprites.destroy(mySprite)
-    sprites.destroy(whereItMoves)
-    sprites.destroy(explosion)
-    sprites.destroyAllSpritesOfKind(SpriteKind.Projectile)
-    pause(1000)
-    shopTitle = sprites.create(assets.image`shop`, SpriteKind.prompt)
-    shopTitle.y = 10
-    color.startFadeFromCurrent(color.originalPalette, 1000)
-    list()
+function spawnItem (img2: Image, kind: number) {
+    s = sprites.create(img2, kind)
+    if (!(isPlaying)) {
+        s.destroy()
+        return s
+    }
+    s.setPosition(randint(0, 1) == 0 ? randint(6, 69) : randint(91, 154), 0)
+    s.setVelocity(0, screenSpeed + 10)
+    s.setFlag(SpriteFlag.AutoDestroy, true)
+    return s
 }
-controller.menu.onEvent(ControllerButtonEvent.Pressed, function () {
-    if (shopTitle) {
-        sprites.destroy(shopTitle)
-    }
-    if (myMenu3) {
-        sprites.destroy(myMenu3)
-    }
-    menu()
-})
-sprites.onDestroyed(SpriteKind.Projectile, function (sprite) {
+sprites.onDestroyed(SpriteKind.Enemy, function (sprite) {
     info.changeScoreBy(carType)
 })
-let nextSpawnTime = 0
-let p: Sprite = null
-let clock: Sprite = null
-let xPicker = 0
+let enemyCar: Sprite = null
+let s: Sprite = null
 let ambulance: Sprite = null
-let whereItMoves: Sprite = null
 let explosion: Sprite = null
-let shopTitle: Sprite = null
-let everyHowMuch = 0
-let carType = 0
-let car: Image = null
 let total = 0
-let listOfCars: miniMenu.MenuItem[] = []
-let myMenu3: miniMenu.MenuSprite = null
 let myMenu2: miniMenu.MenuSprite = null
-let title: fancyText.TextSprite = null
-let coin: Sprite = null
-let mySprite: Sprite = null
-let myMenu: miniMenu.MenuSprite = null
+let myTextSprite: fancyText.TextSprite = null
 let isPlaying = false
+let myMenu3: miniMenu.MenuSprite = null
+let myMenu: miniMenu.MenuSprite = null
+let shopTitle: Sprite = null
+let playerSprite: Sprite = null
+let isMenu = 0
+let volumeDiagram: fancyText.TextSprite = null
+let status: string[] = []
+let carImgs: Image[] = []
+let prices: number[] = []
 let maxCars = 0
+let car: Image = null
+let carType = 0
 let screenSpeed = 0
-let golfCart = ""
-let America = ""
-let pink = ""
-music.setVolume(127.5)
-music.play(music.createSong(assets.song`music`), music.PlaybackMode.LoopingInBackground)
+let volume = 0
 let titleScreen: Image = null
-pink = "100$"
-America = "1,000$"
-golfCart = "10,000$"
+volume = 128
 screenSpeed = 10
+carType = 1
+car = assets.image`redCar`
 maxCars = 1
-let carHeight = 15
-let totalDistance = 120 + carHeight
-game.setDialogCursor(assets.image`A`)
+prices = [
+0,
+100,
+1000,
+10000
+]
+carImgs = [
+assets.image`redCar`,
+assets.image`pinkCar`,
+assets.image`americaCar`,
+assets.image`golfCart`
+]
+status = [
+"owned",
+"100$",
+"1,000$",
+"10,000$"
+]
+music.play(music.createSong(assets.song`music`), music.PlaybackMode.LoopingInBackground)
 menu()
-// Spawns Clocks
-game.onUpdateInterval(randint(5000, 10000), function () {
-    if (isPlaying) {
-        xPicker = randint(1, 2)
-        clock = sprites.create(assets.image`clock`, SpriteKind.delayer)
-        if (xPicker == 1) {
-            clock.setPosition(randint(6, 69), 0)
-        } else if (xPicker == 2) {
-            clock.setPosition(randint(91, 154), 0)
-        }
-        clock.setVelocity(0, screenSpeed + 10)
-        clock.setFlag(SpriteFlag.AutoDestroy, true)
-    }
-})
-// Spawns Coins
-game.onUpdateInterval(randint(5000, 10000), function () {
-    if (isPlaying) {
-        xPicker = randint(1, 2)
-        coin = sprites.create(assets.image`coin`, SpriteKind.extra)
-        if (xPicker == 1) {
-            coin.setPosition(randint(6, 69), 0)
-        } else if (xPicker == 2) {
-            coin.setPosition(randint(91, 154), 0)
-        }
-        coin.setVelocity(0, screenSpeed + 10)
-        coin.setFlag(SpriteFlag.AutoDestroy, true)
-    }
-})
 forever(function () {
     if (isPlaying) {
-        p = sprites.create(assets.image`enemyCar`, SpriteKind.Projectile)
-        xPicker = randint(1, 2)
-        if (xPicker == 1) {
-            p.setPosition(randint(6, 69), (0 - carHeight) / 2)
-        } else if (xPicker == 2) {
-            p.setPosition(randint(91, 154), (0 - carHeight) / 2)
-        }
-        p.setVelocity(0, screenSpeed + 20)
-        p.setFlag(SpriteFlag.AutoDestroy, true)
-        nextSpawnTime = totalDistance / p.vy / maxCars * 1000
-        pause(nextSpawnTime)
-    } else {
-        // Small yield when not playing
-        pause(100)
+        enemyCar = spawnItem(assets.image`enemyCar`, SpriteKind.Enemy)
+        enemyCar.vy = screenSpeed + 20
+        pause(135 / enemyCar.vy / maxCars * 1000)
     }
+    pause(100)
 })
-// 3. Accelerate safely by 1 px every 100 ms
+game.onUpdateInterval(6000, function () {
+    spawnItem(assets.image`coin`, SpriteKind.extra)
+})
 game.onUpdateInterval(100, function () {
     if (isPlaying) {
         screenSpeed += 1
         scroller.scrollBackgroundWithSpeed(0, screenSpeed)
-        for (let spr of sprites.allOfKind(SpriteKind.Projectile)) {
-            spr.vy = screenSpeed + 20
+        for (let t of sprites.allOfKind(SpriteKind.Projectile)) {
+            t.vy = screenSpeed + 20
         }
     }
+})
+game.onUpdateInterval(8000, function () {
+    spawnItem(assets.image`clock`, SpriteKind.delayer)
 })
