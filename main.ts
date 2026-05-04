@@ -160,6 +160,9 @@ function play () {
     isPlaying = true
     color.startFadeFromCurrent(color.originalPalette)
 }
+info.onCountdownEnd(function () {
+    info.changeScoreBy(total)
+})
 function shop () {
     color.startFadeFromCurrent(color.Black)
     color.pauseUntilFadeDone()
@@ -262,6 +265,7 @@ status = [
 "10,000$"
 ]
 music.play(music.createSong(assets.song`music`), music.PlaybackMode.LoopingInBackground)
+info.startCountdown(1200)
 menu()
 forever(function () {
     if (isPlaying) {
